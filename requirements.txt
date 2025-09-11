@@ -8,5 +8,6 @@ PyPDF2>=3.0.0
 torch>=2.0.1
 typing-extensions>=4.7.1
 rich>=14.1.0
+langchain-community
 
 
