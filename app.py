@@ -76,7 +76,7 @@ st.sidebar.title("PDF Upload")
 uploaded_file = st.sidebar.file_uploader("Upload PDF", type="pdf")
 
 st.sidebar.title("LLM Settings")
-model_name = st.sidebar.text_input("HuggingFace Model", "openbmb/MiniCPM4.1-8B")
+model_name = st.sidebar.text_input("HuggingFace Model", "distilbert/distilbert-base-uncased-finetuned-sst-2-english")
 embedding_model = "sentence-transformers/all-MiniLM-L6-v2"
 
 # -------- Main Area --------
@@ -164,6 +164,7 @@ else:
 
 # Footer or sidebar caption
 st.sidebar.caption("Powered by LangChain, HuggingFace, FAISS, and Streamlit.")
+
 
 
 
