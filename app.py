@@ -2,14 +2,22 @@ import streamlit as st
 import sqlite3
 from PyPDF2 import PdfReader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.embeddings import HuggingFaceEmbeddings
-from langchain.vectorstores import FAISS
+
+# Updated imports to fix deprecation warnings
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_community.vectorstores import FAISS
+
 from langchain.chains import LLMChain, ConversationalRetrievalChain
 from langchain.prompts import PromptTemplate
 from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 import tempfile
 import torch
 from langchain.memory import ConversationBufferMemory
+
+memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
+
+# ... rest of your existing code unchanged ...
+
 
 memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
 
@@ -166,5 +174,6 @@ else:
     st.info("Upload a PDF and specify an LLM model to get started.")
 
 st.sidebar.caption("Powered by LangChain, HuggingFace, FAISS, and Streamlit.")
+
 
 
