@@ -97,8 +97,23 @@ if uploaded_file:
     retriever = vectorstore.as_retriever()
 
     # Load LLM pipeline
+    import streamlit as st
+from transformers import AutoModelForCausalLM, AutoTokenizer
+import torch
+
+@st.cache_resource(show_spinner=False)
+def load_model_and_tokenizer(model_name):
     tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForCausalLM.from_pretrained(model_name, trust_remote_code=True,dtype=torch.float16)
+    model = AutoModelForCausalLM.from_pretrained(model_name, trust_remote_code=True, dtype=torch.float16)
+    return tokenizer, model
+
+model_name = st.sidebar.text_input("HuggingFace Model", "distilbert/distilbert-base-uncased-finetuned-sst-2-english")
+
+if model_name:
+    tokenizer, model = load_model_and_tokenizer(model_name)
+    pipe = pipeline("text-generation", model=model, tokenizer=tokenizer, max_new_tokens=512, temperature=0.7)
+    # rest of your code using tokenizer and model
+
     pipe = pipeline("text-generation", model=model, tokenizer=tokenizer, max_new_tokens=512, temperature=0.7)
     from langchain.llms import HuggingFacePipeline
     llm = HuggingFacePipeline(pipeline=pipe)
@@ -164,6 +179,7 @@ else:
 
 # Footer or sidebar caption
 st.sidebar.caption("Powered by LangChain, HuggingFace, FAISS, and Streamlit.")
+
 
 
 
