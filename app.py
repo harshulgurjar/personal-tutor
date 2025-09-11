@@ -11,7 +11,6 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 import tempfile
 import torch
 
-
 # -------- Database Functions --------
 def init_db():
     conn = sqlite3.connect("students.db")
@@ -76,18 +75,25 @@ st.sidebar.title("PDF Upload")
 uploaded_file = st.sidebar.file_uploader("Upload PDF", type="pdf")
 
 st.sidebar.title("LLM Settings")
-model_name = st.sidebar.text_input("HuggingFace Model", "distilbert/distilbert-base-uncased-finetuned-sst-2-english")
+model_name = st.sidebar.text_input("HuggingFace Model", "gpt2")  # Use a causal LM model
+
 embedding_model = "sentence-transformers/all-MiniLM-L6-v2"
 
-# -------- Main Area --------
-if uploaded_file:
+# -------- Model Loading with Cache --------
+@st.cache_resource(show_spinner=True)
+def load_model_and_tokenizer(model_name):
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model = AutoModelForCausalLM.from_pretrained(model_name, trust_remote_code=True, dtype=torch.float16)
+    return tokenizer, model
+
+if uploaded_file and model_name:
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
         tmp_file.write(uploaded_file.read())
         pdf_path = tmp_file.name
 
     # Text Extraction & chunking
     reader = PdfReader(pdf_path)
-    text = "".join(page.extract_text() for page in reader.pages)
+    text = "".join(page.extract_text() for page in reader.pages if page.extract_text() is not None)
     splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
     chunks = splitter.split_text(text)
 
@@ -96,24 +102,8 @@ if uploaded_file:
     vectorstore = FAISS.from_texts(chunks, embedding=embeddings)
     retriever = vectorstore.as_retriever()
 
-    # Load LLM pipeline
-    import streamlit as st
-from transformers import AutoModelForCausalLM, AutoTokenizer
-import torch
-
-@st.cache_resource(show_spinner=False)
-def load_model_and_tokenizer(model_name):
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForCausalLM.from_pretrained(model_name, trust_remote_code=True, dtype=torch.float16)
-    return tokenizer, model
-
-model_name = st.sidebar.text_input("HuggingFace Model", "distilbert/distilbert-base-uncased-finetuned-sst-2-english")
-
-if model_name:
+    # Load cached model/tokenizer
     tokenizer, model = load_model_and_tokenizer(model_name)
-    pipe = pipeline("text-generation", model=model, tokenizer=tokenizer, max_new_tokens=512, temperature=0.7)
-    # rest of your code using tokenizer and model
-
     pipe = pipeline("text-generation", model=model, tokenizer=tokenizer, max_new_tokens=512, temperature=0.7)
     from langchain.llms import HuggingFacePipeline
     llm = HuggingFacePipeline(pipeline=pipe)
@@ -123,12 +113,13 @@ if model_name:
     You are a personalized AI tutor.
     Student profile: {level} level with goal: {goal}.
     Preferred learning pace: {pace}.
-
     Context: {context}
     Question: {question}
     Helpful Answer:"""
     prompt = PromptTemplate(template=template, input_variables=["context", "question", "level", "goal", "pace"])
+
     memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
+
     qa_chain = RetrievalQA.from_chain_type(
         llm=llm,
         retriever=retriever,
@@ -139,14 +130,11 @@ if model_name:
     st.title("PDF Tutor with AI")
     st.header("Ask Questions about your PDF")
     question = st.text_input("Type your question here")
-
     if question:
-        # Provide profile parameters if loaded, fallback else
         profile = get_student_profile(name)
         level_val = profile["level"] if profile else "Beginner"
         goal_val = profile["goal"] if profile else "General learning"
         pace_val = profile["pace"] if profile else "Medium"
-
         result = qa_chain(
             {
                 "query": question,
@@ -161,7 +149,6 @@ if model_name:
 
     st.header("Generate Multiple Choice Quiz")
     topic = st.text_input("Quiz Topic")
-
     if st.button("Create Quiz") and topic:
         quiz_template = """
         You are a quiz generator AI tutor.
@@ -175,12 +162,6 @@ if model_name:
         st.markdown(quiz)
 
 else:
-    st.info("Upload a PDF to get started.")
+    st.info("Upload a PDF and specify an LLM model to get started.")
 
-# Footer or sidebar caption
 st.sidebar.caption("Powered by LangChain, HuggingFace, FAISS, and Streamlit.")
-
-
-
-
-
