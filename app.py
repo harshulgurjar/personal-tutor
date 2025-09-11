@@ -9,6 +9,8 @@ from langchain.prompts import PromptTemplate
 from langchain.memory import ConversationBufferMemory
 from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 import tempfile
+import torch
+
 
 # -------- Database Functions --------
 def init_db():
@@ -162,5 +164,6 @@ else:
 
 # Footer or sidebar caption
 st.sidebar.caption("Powered by LangChain, HuggingFace, FAISS, and Streamlit.")
+
 
 
