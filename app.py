@@ -101,7 +101,7 @@ if uploaded_file and model_name:
     reader = PdfReader(pdf_path)
     text = "".join(page.extract_text() for page in reader.pages if page.extract_text())
 
-    splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+    splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
     chunks = splitter.split_text(text)
 
     embeddings = HuggingFaceEmbeddings(model_name=embedding_model)
@@ -174,6 +174,7 @@ else:
     st.info("Upload a PDF and specify an LLM model to get started.")
 
 st.sidebar.caption("Powered by LangChain, HuggingFace, FAISS, and Streamlit.")
+
 
 
 
