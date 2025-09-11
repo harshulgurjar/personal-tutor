@@ -96,7 +96,7 @@ if uploaded_file:
 
     # Load LLM pipeline
     tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForCausalLM.from_pretrained(model_name, trust_remote_code=True,dtype="auto")
+    model = AutoModelForCausalLM.from_pretrained(model_name, trust_remote_code=True,dtype=torch.float16)
     pipe = pipeline("text-generation", model=model, tokenizer=tokenizer, max_new_tokens=512, temperature=0.7)
     from langchain.llms import HuggingFacePipeline
     llm = HuggingFacePipeline(pipeline=pipe)
@@ -162,4 +162,5 @@ else:
 
 # Footer or sidebar caption
 st.sidebar.caption("Powered by LangChain, HuggingFace, FAISS, and Streamlit.")
+
 
