@@ -143,10 +143,10 @@ Helpful Answer:"""
         {"question": question, "chat_history": chat_history}
             )
 
-            st.session_state["chat_history"] = chat_history + [(question, result["answer"])]
+    st.session_state["chat_history"] = chat_history + [(question, result["answer"])]
 
-        st.write("**Answer:**")
-        st.write(result)
+    st.write("**Answer:**")
+    st.write(result)
 
     st.header("Generate Multiple Choice Quiz")
     topic = st.text_input("Quiz Topic")
@@ -166,4 +166,5 @@ else:
     st.info("Upload a PDF and specify an LLM model to get started.")
 
 st.sidebar.caption("Powered by LangChain, HuggingFace, FAISS, and Streamlit.")
+
 
