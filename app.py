@@ -11,7 +11,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 import tempfile
 import torch
 
-# -------- Database Functions --------
+# Database functions
 def init_db():
     conn = sqlite3.connect("students.db")
     cursor = conn.cursor()
@@ -50,10 +50,9 @@ def get_student_profile(name):
     else:
         return None
 
-# Initialize DB table at start
 init_db()
 
-# -------- Sidebar --------
+# Sidebar UI
 st.sidebar.title("Student Profile")
 name = st.sidebar.text_input("Name")
 level = st.sidebar.selectbox("Level", ["Beginner", "Intermediate", "Advanced"])
@@ -63,7 +62,6 @@ pace = st.sidebar.selectbox("Preferred Pace", ["Slow", "Medium", "Fast"])
 if st.sidebar.button("Save Profile"):
     save_student_profile(name, level, goal, pace)
     st.sidebar.success(f"Profile for {name} saved.")
-
 if st.sidebar.button("Load Profile"):
     profile = get_student_profile(name)
     if profile:
@@ -75,51 +73,45 @@ st.sidebar.title("PDF Upload")
 uploaded_file = st.sidebar.file_uploader("Upload PDF", type="pdf")
 
 st.sidebar.title("LLM Settings")
-model_name = st.sidebar.text_input("HuggingFace Model", "gpt2")  # causal LM model
-
+model_name = st.sidebar.text_input("HuggingFace Model", "gpt2")
 embedding_model = "sentence-transformers/all-MiniLM-L6-v2"
 
-# -------- Model loading with caching --------
+# Cache model/tokenizer loading for performance
 @st.cache_resource(show_spinner=True)
 def load_model_and_tokenizer(name):
     tokenizer = AutoTokenizer.from_pretrained(name)
     model = AutoModelForCausalLM.from_pretrained(name, trust_remote_code=True, dtype=torch.float16)
     return tokenizer, model
 
-# -------- Main App --------
 if uploaded_file and model_name:
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
         tmp_file.write(uploaded_file.read())
         pdf_path = tmp_file.name
 
-    # Extract text from PDF
     reader = PdfReader(pdf_path)
-    text = "".join(page.extract_text() for page in reader.pages if page.extract_text() is not None)
+    text = "".join(page.extract_text() for page in reader.pages if page.extract_text())
 
-    # Split text into chunks
     splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
     chunks = splitter.split_text(text)
 
-    # Create embeddings and vectorstore
     embeddings = HuggingFaceEmbeddings(model_name=embedding_model)
     vectorstore = FAISS.from_texts(chunks, embedding=embeddings)
     retriever = vectorstore.as_retriever()
 
-    # Load model and tokenizer (cached)
     tokenizer, model = load_model_and_tokenizer(model_name)
     pipe = pipeline("text-generation", model=model, tokenizer=tokenizer, max_new_tokens=512, temperature=0.7)
     from langchain.llms import HuggingFacePipeline
     llm = HuggingFacePipeline(pipeline=pipe)
 
-    # Prepare prompt template with expected input variables
+    # Prompt with all needed input variables
     template = """
-    You are a personalized AI tutor.
-    Student profile: {level} level with goal: {goal}.
-    Preferred learning pace: {pace}.
-    Context: {context}
-    Question: {question}
-    Helpful Answer:"""
-    prompt = PromptTemplate(template=template, input_variables=["context", "question", "level", "goal", "pace"])
+You are a personalized AI tutor.
+Student profile: {level} level with goal: {goal}.
+Preferred learning pace: {pace}.
+Context: {context}
+Question: {query}
+Helpful Answer:"""
+    prompt = PromptTemplate(template=template, input_variables=["context", "query", "level", "goal", "pace"])
 
     memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
 
@@ -139,9 +131,9 @@ if uploaded_file and model_name:
         goal_val = profile["goal"] if profile else "General learning"
         pace_val = profile["pace"] if profile else "Medium"
 
-        # Use correct keys as per prompt variables
+        # Provide correct inputs per prompt
         result = qa_chain({
-            "question": question,
+            "query": question,
             "level": level_val,
             "goal": goal_val,
             "pace": pace_val,
@@ -154,10 +146,10 @@ if uploaded_file and model_name:
     topic = st.text_input("Quiz Topic")
     if st.button("Create Quiz") and topic:
         quiz_template = """
-        You are a quiz generator AI tutor.
-        Create 3 multiple-choice questions on the topic below.
-        Topic: {topic}
-        """
+You are a quiz generator AI tutor.
+Create 3 multiple-choice questions on the topic below.
+Topic: {topic}
+"""
         quiz_prompt = PromptTemplate(input_variables=["topic"], template=quiz_template)
         quiz_chain = LLMChain(llm=llm, prompt=quiz_prompt)
         quiz = quiz_chain.run(topic=topic)
