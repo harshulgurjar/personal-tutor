@@ -4,14 +4,13 @@ from PyPDF2 import PdfReader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.vectorstores import FAISS
-from langchain.chains import RetrievalQA, LLMChain
+from langchain.chains import LLMChain, ConversationalRetrievalChain
 from langchain.prompts import PromptTemplate
-from langchain.memory import ConversationBufferMemory
 from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 import tempfile
 import torch
 
-# Database functions
+# Database utility functions
 def init_db():
     conn = sqlite3.connect("students.db")
     cursor = conn.cursor()
@@ -76,7 +75,7 @@ st.sidebar.title("LLM Settings")
 model_name = st.sidebar.text_input("HuggingFace Model", "gpt2")
 embedding_model = "sentence-transformers/all-MiniLM-L6-v2"
 
-# Cache model/tokenizer loading for performance
+# Cache loading of model and tokenizer for speed and resource management
 @st.cache_resource(show_spinner=True)
 def load_model_and_tokenizer(name):
     tokenizer = AutoTokenizer.from_pretrained(name)
@@ -101,25 +100,27 @@ if uploaded_file and model_name:
     tokenizer, model = load_model_and_tokenizer(model_name)
     pipe = pipeline("text-generation", model=model, tokenizer=tokenizer, max_new_tokens=512, temperature=0.7)
     from langchain.llms import HuggingFacePipeline
+
     llm = HuggingFacePipeline(pipeline=pipe)
 
-    # Prompt with all needed input variables
-    template = """
+    prompt_template = """
 You are a personalized AI tutor.
 Student profile: {level} level with goal: {goal}.
 Preferred learning pace: {pace}.
 Context: {context}
-Question: {query}
+Question: {question}
 Helpful Answer:"""
-    prompt = PromptTemplate(template=template, input_variables=["context", "query", "level", "goal", "pace"])
 
-    memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
+    prompt = PromptTemplate(
+        template=prompt_template,
+        input_variables=["context", "question", "level", "goal", "pace"]
+    )
 
-    qa_chain = RetrievalQA.from_chain_type(
-        llm=llm,
+    llm_chain = LLMChain(llm=llm, prompt=prompt)
+
+    qa_chain = ConversationalRetrievalChain(
         retriever=retriever,
-        chain_type="stuff",
-        chain_type_kwargs={"prompt": prompt},
+        combine_docs_chain=llm_chain,
     )
 
     st.title("PDF Tutor with AI")
@@ -131,16 +132,17 @@ Helpful Answer:"""
         goal_val = profile["goal"] if profile else "General learning"
         pace_val = profile["pace"] if profile else "Medium"
 
-        # Provide correct inputs per prompt
-        result = qa_chain({
-            "query": question,
-            "level": level_val,
-            "goal": goal_val,
-            "pace": pace_val,
-        })
-        answer = result["result"]
+        # Pass all inputs required by prompt
+        result = qa_chain.run(
+            {
+                "question": question,
+                "level": level_val,
+                "goal": goal_val,
+                "pace": pace_val,
+            }
+        )
         st.write("**Answer:**")
-        st.write(answer)
+        st.write(result)
 
     st.header("Generate Multiple Choice Quiz")
     topic = st.text_input("Quiz Topic")
