@@ -1,23 +1,12 @@
-# Core LLM + Retrieval stack
-langchain
-langchain-huggingface
-sentence-transformers
-faiss-cpu
+streamlit>=1.24.0
+langchain==0.3.25
+langchain-huggingface==0.3.1
+transformers>=4.30.0
+sentence-transformers>=2.2.2
+faiss-cpu>=1.7.3
+PyPDF2>=3.0.0
+torch>=2.0.1
+typing-extensions>=4.7.1
+rich>=14.1.0
 
-# Hugging Face Transformers + Pipelines
-transformers
-torch
-accelerate
-
-# PDF Reading
-PyPDF2
-
-# Databases (SQLite is built-in but adding SQLAlchemy for ORM)
-SQLAlchemy
-
-# For interactive UI (optional)
-streamlit
-
-# Misc tools
-tqdm
 
