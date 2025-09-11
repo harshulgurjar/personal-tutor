@@ -9,6 +9,9 @@ from langchain.prompts import PromptTemplate
 from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 import tempfile
 import torch
+from langchain.memory import ConversationBufferMemory
+
+memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
 
 # Database utility functions
 def init_db():
@@ -118,10 +121,11 @@ Helpful Answer:"""
 
     llm_chain = LLMChain(llm=llm, prompt=prompt)
 
-    qa_chain = ConversationalRetrievalChain(
-        retriever=retriever,
-        combine_docs_chain=llm_chain,
-    )
+    qa_chain = ConversationalRetrievalChain.from_llm(
+    llm=llm,
+    retriever=retriever,
+    memory=memory,
+)
 
     st.title("PDF Tutor with AI")
     st.header("Ask Questions about your PDF")
@@ -133,14 +137,14 @@ Helpful Answer:"""
         pace_val = profile["pace"] if profile else "Medium"
 
         # Pass all inputs required by prompt
-        result = qa_chain.run(
-            {
-                "question": question,
-                "level": level_val,
-                "goal": goal_val,
-                "pace": pace_val,
-            }
-        )
+        chat_history = st.session_state.get("chat_history", [])
+
+    result = qa_chain(
+        {"question": question, "chat_history": chat_history}
+            )
+
+            st.session_state["chat_history"] = chat_history + [(question, result["answer"])]
+
         st.write("**Answer:**")
         st.write(result)
 
@@ -162,3 +166,4 @@ else:
     st.info("Upload a PDF and specify an LLM model to get started.")
 
 st.sidebar.caption("Powered by LangChain, HuggingFace, FAISS, and Streamlit.")
+
