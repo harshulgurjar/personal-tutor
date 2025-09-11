@@ -147,7 +147,7 @@ Helpful Answer:"""
         pace_val = profile["pace"] if profile else "Medium"
 
         # Pass all inputs required by prompt
-        chat_history = st.session_state.get("chat_history", [])
+    chat_history = st.session_state.get("chat_history", [])
 
     result = qa_chain(
         {"question": question, "chat_history": chat_history}
@@ -176,6 +176,7 @@ else:
     st.info("Upload a PDF and specify an LLM model to get started.")
 
 st.sidebar.caption("Powered by LangChain, HuggingFace, FAISS, and Streamlit.")
+
 
 
 
