@@ -103,6 +103,8 @@ if uploaded_file and model_name:
 
     splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
     chunks = splitter.split_text(text)
+    tokenizer, model = load_model_and_tokenizer(model_name)
+    tokenizer.pad_token = tokenizer.eos_token 
 
     embeddings = HuggingFaceEmbeddings(model_name=embedding_model)
     vectorstore = FAISS.from_texts(chunks, embedding=embeddings)
@@ -174,6 +176,7 @@ else:
     st.info("Upload a PDF and specify an LLM model to get started.")
 
 st.sidebar.caption("Powered by LangChain, HuggingFace, FAISS, and Streamlit.")
+
 
 
 
